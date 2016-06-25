@@ -1,2 +1,5 @@
-# doctor_format
-For formatting program files. Because pep8 is ugly
+# installation
+pip install ImportDoctor
+# usage
+`from ImportDoctor.impdoc import ImportDoctor`
+`ImportDoctor.run(filename)`
