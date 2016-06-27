@@ -201,12 +201,12 @@ class ImportDoctor(object):
         py_native = []
         while index < len(base):
             parts = base[index].split(' ')
-            
-            if not is_sys_module(parts[1]):
-                index += 1
-                continue
+           
             if is_py_module(parts[1]):
                 py_native.append(base.pop(index))
+                continue 
+            if not is_sys_module(parts[1]):
+                index += 1
                 continue
             native.append(base.pop(index))
         native.append('')
