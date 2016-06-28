@@ -2,54 +2,11 @@ import os
 import sys
 import inspect
 from collections import defaultdict
+import doctor_base
 
-# Checks to see if a string matches any of the current system level modules
-def is_sys_module(name):
-    if name not in sys.modules.keys():
-        return False
-    pathname = os.path.dirname(inspect.getfile(sys.modules[name]))
-    # System modules either come from standard python libraries or from venvs
-    for path in sys.path:
-        if pathname.startswith(path):
-            return True
-    return False
-
-# returns a long line with \\\n inserted after a space
-# segmenting the line into depth sized chunks
-def wrap_word(line, depth, strict):
-    line = line.strip()
-    if depth < 30:
-        return line
-    result = ''
-    split_point = line.find(' ')
-    while len(line) > depth:
-        if split_point == -1:
-            break
-        next_blank = split_point
-        while next_blank <= depth:
-            split_point = next_blank
-            next_blank = line.find(' ', next_blank + 1)
-            if next_blank == -1:
-                if strict:
-                    result += line[:split_point + 1] + '\\\n'
-                    line = '    ' + line[split_point + 1:]
-                return result + line
-        result += line[:split_point + 1] + '\\\n'
-        line = '    ' + line[split_point + 1:]
-        split_point = line.find(' ', 5)
-    return result + line
-        
                 
 # Object to hold all of the settings for formatting imports
-class ImportDoctor(ImportNurse):
-    
-    # groups as follows: from [AModule] import ([A, B, C])
-    from_statement = re.compile('from +([a-zA-Z._]+) +import +\\(?([ a-zA-Z.,_]+)\\)? *')
-    # groups as follows: import ([AModule, BModule])
-    import_statement = re.compile('import \\(?([ a-zA-Z.,_]+)\\)?')
-    
-    # primary filtering function
-    alpha_filter = lambda n: n
+class ImportDoctor(doctor_base.ImportNurse):
         
     @classmethod
     def run(cls, filename, **kwargs):
@@ -60,37 +17,38 @@ class ImportDoctor(ImportNurse):
             line = line.lstrip()
         return line.startswith('import ') or line.startswith('from ')
     
+    # Parse a single import line (newline & backslashes removed) into the Q
     def parse_import(self, line):
         # Find match in one of two patterns
-        match = self.from_statement.search(line)
+        match = self._from_statement.search(line)
         if not match or len(match.groups()) != 2:
-            match = self.import_statement.search(line)
+            match = self._import_statement.search(line)
             if not match:
                 raise ValueError('Unparsable import: ' + line)
         
         
         groups = list(match.groups())
         base = 'import '
-        pure_import = True
         if len(groups) == 2:
-            pure_import = False
             base = 'from ' + groups[0] + ' import '
             groups = [groups[1]]
         groups = map(lambda n: n.replace(',', '').strip(), groups[0].split(','))
         
+        # if we are doing one import per line, Q is a dictionary,
+        # otherwise it is a list
         if not self.one_import_per_line:
             self.Q.append(base + ', '.join(groups))
             return
         
         self.Q[base] |= set(groups)
-            
     
+    # Analyze a file line by line, pulling the import statements into Q and
+    # pushing everything else into source
     def analyze(self, filename):
         with open(filename) as f:
             doc = f.readlines()
         self.source = []
         self.Q = defaultdict(set) if self.one_import_per_line else []
-        self.alpha_filter = (lambda n: n) if self.alpha_order else (lambda n: len(n))
         
         while doc:
             line = doc.pop(0)
@@ -114,32 +72,35 @@ class ImportDoctor(ImportNurse):
         store = self.Q
         self.Q = []
         for base, parts in store.iteritems():
-            for part in sorted(parts, key=self.alpha_filter, reverse=self.descending):
+            for part in sorted(parts, key=self._filter, reverse=self.descending):
                 self.Q.append(' '.join([base.strip(), part.strip()]))
 
     def sort_imports(self):
         if not self.Q:
+            print 'Queue is empty. Nothing to sort.'
             return
         
+        # Used to sort by everything before the import statement
         def lamb(n, upto=' import'):
             loc = n.find(upto)
             if loc >= 0:
                 return n[:loc + len(upto)]
             return n
         
-        # choose method
+        # choose sorting method
         if self.exclude_from:
-            lam = lambda n: self.alpha_filter(lamb(n))
+            lam = lambda n: self._filter(lamb(n))
         else:
-            lam = self.alpha_filter
+            lam = self._filter
         
         # sort
         self.Q = [
-            wrap_word(line, self._wrap_depth, self.wrap_strict) 
+            doctor_base.wrap_word(line, self._wrap_depth, self.wrap_strict) 
             for line in sorted(self.Q, key=lam, reverse=self.descending)
         ]
     
-        # Must reverse search, so modules that extend other modules in this list get processed first.
+        # Must reverse search, so modules that extend other modules in this
+        # list get processed first.
         self._isolation = sorted(self._isolation, reverse=True)
         
         # __future__ imports must be on top
@@ -153,7 +114,7 @@ class ImportDoctor(ImportNurse):
                     continue
             others.append(line)
         self.Q = others
-        futures.sort()
+#         futures.sort()
         
         # split on import first
         if self.import_ontop:
@@ -190,10 +151,10 @@ class ImportDoctor(ImportNurse):
                     break
             if used:
                 continue
-            if module_name in builtin_python_modules:
+            if module_name in doctor_base.builtin_python_modules:
                 py_native.append(base.pop(index))
                 continue 
-            if is_sys_module(module_name):
+            if doctor_base.is_sys_module(module_name):
                 native.append(base.pop(index))
                 continue
             index += 1
@@ -202,6 +163,8 @@ class ImportDoctor(ImportNurse):
         groups.append(native)
         groups.append(base)
         groups = [g for g in groups if g]
+        
+        # Merge all groups with a space inbetween each one
         self.Q = []
         for x, module_group in enumerate(groups):
             self.Q.extend(module_group)
@@ -209,7 +172,7 @@ class ImportDoctor(ImportNurse):
                 self.Q.append('')
             
     def remap(self, filename):
-        if 'source' not in self.__vars__():
+        if 'source' not in self.__vars__() or self.source is None:
             raise ValueError('A file has not been loaded yet.')
         if not self.Q:
             return
