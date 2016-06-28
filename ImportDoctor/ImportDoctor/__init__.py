@@ -1,5 +1,4 @@
 import os
-import sys
 import inspect
 from collections import defaultdict
 import doctor_base

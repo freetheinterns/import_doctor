@@ -1,4 +1,4 @@
-import re
+import re, sys, os, inspect
 
 class ImportNurse(object):
     ignore_indented = True      # Grabs indented imports
@@ -33,6 +33,17 @@ class ImportNurse(object):
     def __vars__(self):
         return set([x for x in dir(self) if not x.startswith('__') 
                     and not callable(getattr(self, x))])
+   
+    # This function defines a decorator that resets the data parsed if a
+    # function decorated with this is called.
+    def _purge_state(func):
+        def oncall(self, *args, **kwargs):
+            func(self, *args, **kwargs)
+            if self.Q or self.source:
+                print 'Critical variable ({}) modified. Resetting Queue.'.format(func.__name__)
+            self.Q = None
+            self.source = None
+        return oncall 
     
     @property
     def regex_find_import(self):
@@ -107,16 +118,6 @@ class ImportNurse(object):
             raise ValueError('isolated_groups must be a list of module names')
         self._isolation = value[:]
         
-    # This function defines a decorator that resets the data parsed if a
-    # function decorated with this is called.
-    def _purge_state(func):
-        def oncall(self, *args, **kwargs):
-            func(self, *args, **kwargs)
-            if self.Q or self.source:
-                print 'Critical variable ({}) modified. Resetting Queue.'.format(func.__name__)
-            self.Q = None
-            self.source = None
-        return oncall
 
 # Checks to see if a string matches any of the current system level modules
 def is_sys_module(name):
