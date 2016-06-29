@@ -1,5 +1,3 @@
-import os
-import inspect
 from collections import defaultdict
 import doctor_base
 
@@ -16,22 +14,39 @@ class ImportDoctor(doctor_base.ImportNurse):
             line = line.lstrip()
         return line.startswith('import ') or line.startswith('from ')
     
-    # Parse a single import line (newline & backslashes removed) into the Q
-    def parse_import(self, line):
+    def is_comment(self, line):
+        if not self.ignore_indented:
+            line = line.strip()
+        return line.startswith('###')
+    
+    # Apply both of the regex expressions and return the best fit
+    def apply_regex(self, line):
         # Find match in one of two patterns
         match = self._from_statement.search(line)
         if not match or len(match.groups()) != 2:
             match = self._import_statement.search(line)
             if not match:
                 raise ValueError('Unparsable import: ' + line)
-        
-        
+        return match
+    
+    # Parse a regex match into a list of groups. Split the last group on
+    # any comma, then strip everything.
+    def parse_match(self, match):
+        if not match: return []
         groups = list(match.groups())
+        for i in range(len(groups)):
+            groups[i] = map(lambda n: n.replace(',', '').strip(), groups[i].split(','))
+        return groups
+    
+    # Parse a single import line (newline & backslashes removed) into the Q
+    def parse_import(self, line):
+        match = self.apply_regex(line)
+        
+        groups = self.parse_match(match)
         base = 'import '
         if len(groups) == 2:
-            base = 'from ' + groups[0] + ' import '
-            groups = [groups[1]]
-        groups = map(lambda n: n.replace(',', '').strip(), groups[0].split(','))
+            base = 'from ' + ''.join(groups[0]) + ' import '
+        groups = groups[-1]
         
         # if we are doing one import per line, Q is a dictionary,
         # otherwise it is a list
@@ -41,16 +56,22 @@ class ImportDoctor(doctor_base.ImportNurse):
         
         self.Q[base] |= set(groups)
     
-    # Analyze a file line by line, pulling the import statements into Q and
-    # pushing everything else into source
+    # Read from a file and start the parsing process
     def analyze(self, filename):
         with open(filename) as f:
             doc = f.readlines()
+        self.parse_source(doc)
+        
+    # Analyze a file line by line, pulling the import statements into Q and
+    # pushing everything else into source
+    def parse_source(self, doc):
         self.source = []
         self.Q = defaultdict(set) if self.one_import_per_line else []
         
         while doc:
             line = doc.pop(0)
+            if self.is_comment(line):
+                continue
             if not self.is_import_statement(line):
                 self.source.append(line)
                 continue
@@ -102,6 +123,11 @@ class ImportDoctor(doctor_base.ImportNurse):
         # list get processed first.
         self._isolation = sorted(self._isolation, reverse=True)
         
+        self.place_imports_ontop()
+        futures = self.split_futures()
+        self.isolate_modules_by_group(futures)
+
+    def split_futures(self):
         # __future__ imports must be on top
         futures = []
         others = []
@@ -113,8 +139,9 @@ class ImportDoctor(doctor_base.ImportNurse):
                     continue
             others.append(line)
         self.Q = others
-#         futures.sort()
-        
+        return futures
+
+    def place_imports_ontop(self):
         # split on import first
         if self.import_ontop:
             base = self.Q
@@ -127,7 +154,8 @@ class ImportDoctor(doctor_base.ImportNurse):
                 index += 1
             self.Q = native
             self.Q.extend(base)
-        
+
+    def isolate_modules_by_group(self, futures):
         # split on module categories
         if not self.group_by_module_type:
             futures.extend(self.Q)
@@ -153,23 +181,37 @@ class ImportDoctor(doctor_base.ImportNurse):
             if module_name in doctor_base.builtin_python_modules:
                 py_native.append(base.pop(index))
                 continue 
-            if doctor_base.is_sys_module(module_name):
+            if self.is_sys_module(module_name):
                 native.append(base.pop(index))
                 continue
             index += 1
-        groups = [futures, py_native]
-        groups.extend(buckets)
-        groups.append(native)
-        groups.append(base)
-        groups = [g for g in groups if g]
+        groups = {}
+        groups['futures'] = futures
+        groups['python builtin'] = py_native
+        for x, mod in enumerate(self._isolation):
+            groups[mod] = buckets[x]
+        groups['system native'] = native
+        groups['all other'] = base
+        group_names = ['futures', 'python builtin', 'system native']
+        group_names.extend(self._isolation)
+        group_names.append('all other')
         
         # Merge all groups with a space inbetween each one
         self.Q = []
-        for x, module_group in enumerate(groups):
-            self.Q.extend(module_group)
+        for x, module_group in enumerate(group_names):
+            if module_group not in groups:
+                contineu
+            if not groups[module_group]:
+                continue
+            if self.comment_names and module_group is not 'futures':
+                title = module_group
+                if title in self._isolation:
+                    title = 'matching ' + title
+                self.Q.append('### Imports from {} modules.'.format(title))
+            self.Q.extend(groups[module_group])
             if x + 1 < len(groups):
                 self.Q.append('')
-            
+
     def remap(self, filename):
         if 'source' not in self.__vars__() or self.source is None:
             raise ValueError('A file has not been loaded yet.')
@@ -198,7 +240,7 @@ class ImportDoctor(doctor_base.ImportNurse):
         rep = ''
         for line in self.Q:
             rep += line + '\n'
-        return rep[:-2]
+        return rep[:-1]
     
     def fix_folder(self, foldername):
         for dirpath, folders, files in os.walk(foldername): 

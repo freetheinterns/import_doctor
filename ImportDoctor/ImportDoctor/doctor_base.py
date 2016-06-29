@@ -8,6 +8,7 @@ class ImportNurse(object):
     exclude_from = True         # Sort on string before 'import' for 'from' imports
     import_ontop = True         # Place all 'from' imports below standard imports
     wrap_strict = False         # If true, wrap_depth will be strictly enforced
+    comment_names = True        # If true, groups will be named in comments above group
     
     # These variables are controlled through getters and setters.
     _alpha_order = False        # Sorts by alphabetical instead of length
@@ -18,17 +19,16 @@ class ImportNurse(object):
     # groups as follows: from [AModule] import ([A, B, C])
     _from_statement = re.compile('from +([a-zA-Z._]+) +import +\\(?([ a-zA-Z.,_]+)\\)? *')
     # groups as follows: import ([AModule, BModule])
-    _import_statement = re.compile('import \\(?([ a-zA-Z.,_]+)\\)? *')
-    
-    # primary filtering function
-    _filter = lambda n: n
-    
+    _import_statement = re.compile('import +\\(?([ a-zA-Z.,_]+)\\)? *')
+
     def __init__(self, **kwargs):
         if not set(kwargs.keys()) <= self.__vars__():
             raise ValueError('Unexpected arguements passed.')
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
         self._filter = (lambda n: n) if self._alpha_order else (lambda n: len(n))
+        pathpat = re.compile('/python[0-3]\.[0-9.]+/')
+        self._sys_paths = [p for p in sys.path if pathpat.search(p)]
     
     def __vars__(self):
         return set([x for x in dir(self) if not x.startswith('__') 
@@ -117,18 +117,17 @@ class ImportNurse(object):
         if type(value) is not list:
             raise ValueError('isolated_groups must be a list of module names')
         self._isolation = value[:]
-        
 
-# Checks to see if a string matches any of the current system level modules
-def is_sys_module(name):
-    if name not in sys.modules.keys():
+    # Checks to see if a string matches any of the current system level modules
+    def is_sys_module(self, name):
+        if name not in sys.modules.keys():
+            return False
+        pathname = os.path.dirname(inspect.getfile(sys.modules[name]))
+        # System modules either come from standard python libraries or from venvs
+        for path in self._sys_paths:
+            if pathname.startswith(path):
+                return True
         return False
-    pathname = os.path.dirname(inspect.getfile(sys.modules[name]))
-    # System modules either come from standard python libraries or from venvs
-    for path in sys.path:
-        if pathname.startswith(path):
-            return True
-    return False
 
 # returns a long line with \\\n inserted after a space
 # segmenting the line into depth sized chunks
