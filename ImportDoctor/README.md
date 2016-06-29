@@ -34,4 +34,5 @@ order_alphabetically = False# If true, imports are sortend alphabetically, not o
 regex_find_import = ...     # The compiled regular expression for finding lines like 'import A'
 regex_find_from = ...       # The compiled regular expression for finding like 'from A import B'
 isolated_groups = []        # A list of modules that will be grouped and sorted separately from other imports
+remove_overrides = True     # Remove imports that are overridden by name.
 ```
