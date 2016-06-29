@@ -133,7 +133,7 @@ class ImportNurse(object):
 # segmenting the line into depth sized chunks
 def wrap_word(line, depth, strict):
     line = line.strip()
-    if depth < 30:
+    if depth < 26:
         return line
     result = ''
     split_point = line.find(' ')
