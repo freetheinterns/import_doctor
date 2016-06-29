@@ -5,11 +5,11 @@ from setuptools import setup, find_packages
 
 setup(
     name='ImportDoctor',
-    version='1.1.10',
+    version='1.1.10.1',
     description='Python file formatter for import statements',
     author='Ted Tenedorio',
     author_email='tedtenedorio@gmail.com',
-    url='https://github.com/freetheinterns/doctor_format',
+    url='https://github.com/freetheinterns/import_doctor',
     classifiers=[
         # How mature is this project? Common values are
         #   3 - Alpha
