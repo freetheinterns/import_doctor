@@ -44,8 +44,8 @@ def test_all_regex():
     regex = [
         ('import animal.cat.mycat ', [['animal.cat.mycat']]),
         ('import   animal, automobile ', [['animal', 'automobile']]),
-        ('from animal  import  cat, dog, rat #nopep8', [['animal'], ['cat', 'dog', 'rat']]),
-        ('from animal import   (  cat, dog, rat  ) #nopep8', [['animal'], ['cat', 'dog', 'rat']]),
+        ('from animal  import  cat, dog as d, rat #nopep8', [['animal'], ['cat', 'dog as d', 'rat']]),
+        ('from animal import   (  cat as c, dog as d, rat  ) #nopep8', [['animal'], ['cat as c', 'dog as d', 'rat']]),
         ('from animal  import (cat, dog, rat  ) ', [['animal'], ['cat', 'dog', 'rat']]),
         ('from animal.phyla import   (cat, dog, rat)', [['animal.phyla'], ['cat', 'dog', 'rat']]),
         ('from animal.phyla  import (cat, dog, rat) ', [['animal.phyla'], ['cat', 'dog', 'rat']]),
@@ -61,9 +61,9 @@ def test_all_sorting():
     unsorted = [
         'from notsys import cat',
         'from notsys import rat, cat',
-        'from notsys import battery',
-        'from sys import cat',
-        'from sys import rat, cat',
+        'from notsys import battery, t',
+        'from sys import cat as r',
+        'from sys import rat, cat as t',
         'from sys import battery',
         'from __future__ import cat',
         'from __future__ import rat, cat',
@@ -71,7 +71,12 @@ def test_all_sorting():
     ]
     
     doc = ImportDoctor()
-    doc.parse_source(unsorted)
+    doc.parse_source(unsorted[:])
+    doc.sort_imports()
+    print doc
+    print '\nnext\n'
+    doc.one_import_per_line = False
+    doc.parse_source(unsorted[:])
     doc.sort_imports()
     print doc
     print 'PASSED'

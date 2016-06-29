@@ -4,7 +4,6 @@ class ImportNurse(object):
     ignore_indented = True      # Grabs indented imports
     group_by_module_type = True # Separates system modules from local ones
     descending = True           # Primary order on sort: True => BIG to small
-    one_import_per_line = True  # Separates grouped imports onto their own lines
     exclude_from = True         # Sort on string before 'import' for 'from' imports
     import_ontop = True         # Place all 'from' imports below standard imports
     wrap_strict = False         # If true, wrap_depth will be strictly enforced
@@ -15,6 +14,8 @@ class ImportNurse(object):
     _newline_padding = 1        # How many empty lines after end of imports
     _isolation = []             # Groups of imports to separate by name
     _wrap_depth = 0             # The character count at which line wrapping begins
+    _one_import_per_line = True # Separates grouped imports onto their own lines
+    _remove_overrides = True    # removes imports that are overridden by others
     
     # groups as follows: from [AModule] import ([A, B, C])
     _from_statement = re.compile('from +([a-zA-Z._]+) +import +\\(?([ a-zA-Z.,_]+)\\)? *')
@@ -45,6 +46,24 @@ class ImportNurse(object):
             self.source = None
         return oncall 
     
+    @property
+    def one_import_per_line(self):
+        return self._one_import_per_line
+    
+    @one_import_per_line.setter
+    @_purge_state
+    def one_import_per_line(self, value):
+        self._one_import_per_line = bool(value)
+        
+    @property
+    def remove_overrides(self):
+        return self._remove_overrides
+    
+    @remove_overrides.setter
+    @_purge_state
+    def remove_overrides(self, value):
+        self._remove_overrides = bool(value)
+        
     @property
     def regex_find_import(self):
         return self._import_statement
