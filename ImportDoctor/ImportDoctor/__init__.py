@@ -38,9 +38,22 @@ class ImportDoctor(doctor_base.ImportNurse):
             groups[i] = map(lambda n: n.replace(',', '').strip(), groups[i].split(','))
         return groups
     
+    # Remove all imports in Q that have a name that exists in groups.
+    # Take into account that 'as' renames a module
     def remove_duplicates(self, groups):
+        def snip(n):
+            loc = n.find(' as ')
+            if loc >= 0:
+                return n[loc + len(' as '):]
+            return n
+        def in_group(X, G):
+            x = snip(X)
+            for entry in G:
+                if x == snip(entry):
+                    return True
+            return False
         for key in self.Q:
-            self.Q[key] = set([x for x in self.Q[key] if x not in groups])
+            self.Q[key] = set([x for x in self.Q[key] if not in_group(x, groups)])
     
     # Parse a single import line (newline & backslashes removed) into the Q
     def parse_import(self, line):
@@ -84,7 +97,9 @@ class ImportDoctor(doctor_base.ImportNurse):
                 while line.find(')', bracket) == -1:
                     line = ' '.join([line, doc.pop(0).strip()])
             self.parse_import(line)
-            
+        self.parse_queue()
+    
+    def parse_queue(self):
         store = self.Q
         self.Q = []
         for base, parts in store.iteritems():
