@@ -38,6 +38,23 @@ class ImportDoctor(doctor_base.ImportNurse):
             groups[i] = map(lambda n: n.replace(',', '').strip(), groups[i].split(','))
         return groups
     
+    # Remove all imports in Q that have a name that exists in groups.
+    # Take into account that 'as' renames a module
+    def remove_duplicates(self, groups):
+        def snip(n):
+            loc = n.find(' as ')
+            if loc >= 0:
+                return n[loc + len(' as '):]
+            return n
+        def in_group(X, G):
+            x = snip(X)
+            for entry in G:
+                if x == snip(entry):
+                    return True
+            return False
+        for key in self.Q:
+            self.Q[key] = set([x for x in self.Q[key] if not in_group(x, groups)])
+    
     # Parse a single import line (newline & backslashes removed) into the Q
     def parse_import(self, line):
         match = self.apply_regex(line)
@@ -46,15 +63,12 @@ class ImportDoctor(doctor_base.ImportNurse):
         base = 'import '
         if len(groups) == 2:
             base = 'from ' + ''.join(groups[0]) + ' import '
-        groups = groups[-1]
+        groups = set(groups[-1])
         
-        # if we are doing one import per line, Q is a dictionary,
-        # otherwise it is a list
-        if not self.one_import_per_line:
-            self.Q.append(base + ', '.join(groups))
-            return
+        if self._remove_overrides:
+            self.remove_duplicates(groups)
         
-        self.Q[base] |= set(groups)
+        self.Q[base] |= groups
     
     # Read from a file and start the parsing process
     def analyze(self, filename):
@@ -66,7 +80,7 @@ class ImportDoctor(doctor_base.ImportNurse):
     # pushing everything else into source
     def parse_source(self, doc):
         self.source = []
-        self.Q = defaultdict(set) if self.one_import_per_line else []
+        self.Q = defaultdict(set) #if self.one_import_per_line else []
         
         while doc:
             line = doc.pop(0)
@@ -83,17 +97,19 @@ class ImportDoctor(doctor_base.ImportNurse):
                 while line.find(')', bracket) == -1:
                     line = ' '.join([line, doc.pop(0).strip()])
             self.parse_import(line)
-            
-            
-        # one line import split
-        if not self.one_import_per_line:
-            return
-        
+        self.parse_queue()
+    
+    def parse_queue(self):
         store = self.Q
         self.Q = []
         for base, parts in store.iteritems():
-            for part in sorted(parts, key=self._filter, reverse=self.descending):
-                self.Q.append(' '.join([base.strip(), part.strip()]))
+            parts = sorted(parts, key=self._filter, reverse=self.descending)
+            if self._one_import_per_line:
+                for part in parts:
+                    self.Q.append(base + part)
+                continue
+            if parts:
+                self.Q.append(base + ', '.join(parts))
 
     def sort_imports(self):
         if not self.Q:
