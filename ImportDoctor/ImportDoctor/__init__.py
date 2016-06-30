@@ -1,5 +1,6 @@
 from collections import defaultdict
 import doctor_base
+import os
 
                 
 # Object to hold all of the settings for formatting imports
