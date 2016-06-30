@@ -3,7 +3,8 @@ import doctor_base
 import os
 
                 
-# Object to hold all of the settings for formatting imports
+# Object to hold all of the settings for formatting imports, can be reused or
+# modified on the fly. Supported by superclass
 class ImportDoctor(doctor_base.ImportNurse):
         
     @classmethod
