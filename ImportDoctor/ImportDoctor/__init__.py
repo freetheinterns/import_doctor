@@ -1,8 +1,10 @@
 from collections import defaultdict
 import doctor_base
+import os
 
                 
-# Object to hold all of the settings for formatting imports
+# Object to hold all of the settings for formatting imports, can be reused or
+# modified on the fly. Supported by superclass
 class ImportDoctor(doctor_base.ImportNurse):
         
     @classmethod
@@ -182,14 +184,14 @@ class ImportDoctor(doctor_base.ImportNurse):
         native = []
         index = 0
         py_native = []
-        buckets = [[]]*len(self._isolation)
+        groups = { mod:[] for mod in self._isolation }
         while index < len(base):
-            module_name = base[index].split(' ')[1]
+            module_name = base[index].split(' ')[1].strip(',')
            
             used = False
-            for x, mod in enumerate(self._isolation):
+            for mod in self._isolation:
                 if module_name.startswith(mod):
-                    buckets[x].append(base.pop(index))
+                    groups[mod].append(base.pop(index))
                     used = True
                     break
             if used:
@@ -201,11 +203,8 @@ class ImportDoctor(doctor_base.ImportNurse):
                 native.append(base.pop(index))
                 continue
             index += 1
-        groups = {}
         groups['futures'] = futures
         groups['python builtin'] = py_native
-        for x, mod in enumerate(self._isolation):
-            groups[mod] = buckets[x]
         groups['system native'] = native
         groups['all other'] = base
         group_names = ['futures', 'python builtin', 'system native']
@@ -271,3 +270,6 @@ class ImportDoctor(doctor_base.ImportNurse):
         self.analyze(filename)
         self.sort_imports()
         self.remap(filename)
+
+def main(*args):
+    ImportDoctor().fix(filename)

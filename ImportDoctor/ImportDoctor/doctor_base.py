@@ -18,11 +18,13 @@ class ImportNurse(object):
     _remove_overrides = True    # removes imports that are overridden by others
     
     # groups as follows: from [AModule] import ([A, B, C])
-    _from_statement = re.compile('from +([a-zA-Z._]+) +import +\\(?([ a-zA-Z.,_]+)\\)? *')
+    _from_statement = re.compile('from +([0-9a-zA-Z._]+) +import +\\(?([ 0-9a-zA-Z.,_]+)\\)? *')
     # groups as follows: import ([AModule, BModule])
-    _import_statement = re.compile('import +\\(?([ a-zA-Z.,_]+)\\)? *')
+    _import_statement = re.compile('import +\\(?([ 0-9a-zA-Z.,_]+)\\)? *')
 
     def __init__(self, **kwargs):
+        self.Q = []
+        self.source = []
         if not set(kwargs.keys()) <= self.__vars__():
             raise ValueError('Unexpected arguements passed.')
         for key, value in kwargs.iteritems():
@@ -54,6 +56,9 @@ class ImportNurse(object):
     @_purge_state
     def one_import_per_line(self, value):
         self._one_import_per_line = bool(value)
+        if not self._one_import_per_line and self._wrap_depth < 26:
+            print 'One import per line has been disabled. Setting default line wrapping at 100 characters'
+            self._wrap_depth = 100
         
     @property
     def remove_overrides(self):
