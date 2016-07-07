@@ -36,7 +36,7 @@ class ImportNurse(object):
         self.save_prefs()
 
     def load_prefs(self):
-        pref_file = 'prefs.txt'
+        pref_file = os.path.join(os.path.dirname(__file__), 'prefs.txt')
         if not os.path.isfile(pref_file):
             return
         with open(pref_file) as f:
@@ -46,7 +46,7 @@ class ImportNurse(object):
             setattr(self, line[0], eval('='.join(line[1:])))
 
     def save_prefs(self):
-        pref_file = 'prefs.txt'
+        pref_file = os.path.join(os.path.dirname(__file__), 'prefs.txt')
         saveable = [
             'ignore_indented',
             'group_by_module_type',
