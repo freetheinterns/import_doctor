@@ -36,5 +36,5 @@ setup(
         'Programming Language :: Python :: 3.5',
     ],
     keywords='import tool format development',
-    packages=find_packages(exclude=['prefs'])
+    packages=find_packages(exclude=['prefs', 'dist', 'ImportDoctor.egg-info'])
 )
