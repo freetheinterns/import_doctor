@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ImportDoctor',
-    version='1.2.0.7',
+    version='1.2.1',
     description='Python file formatter for import statements',
     author='Ted Tenedorio',
     author_email='tedtenedorio@gmail.com',
@@ -36,5 +36,5 @@ setup(
         'Programming Language :: Python :: 3.5',
     ],
     keywords='import tool format development',
-    packages=['ImportDoctor', 'util'],
+    packages=find_packages(exclude=['prefs'])
 )
