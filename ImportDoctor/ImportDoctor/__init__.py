@@ -48,6 +48,8 @@ class ImportDoctor(doctor_base.ImportNurse):
                 return n[loc + len(' as '):]
             return n
         def in_group(X, G):
+            if X == '*':
+                return False
             x = snip(X)
             for entry in G:
                 if x == snip(entry):
