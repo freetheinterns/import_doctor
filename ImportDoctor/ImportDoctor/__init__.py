@@ -181,14 +181,14 @@ class ImportDoctor(doctor_base.ImportNurse):
         native = []
         index = 0
         py_native = []
-        
+
         def lamb(n):
             if n[0].startswith('__REGEX__ '):
                 return ('1' + n[0], n[1])
             return ('0' + n[0], n[1])
         # Must reverse search, so modules that extend other modules in this
         # list get processed first.
-        iso_map = sorted([(self.str_or_pat(mod), mod) for mod in self._ImportNurse__isolation], reverse=True, key=lamb)
+        iso_map = sorted([(self.str_or_pat(mod), self.try_pattern(mod)) for mod in self._ImportNurse__isolation], reverse=True, key=lamb)
         iso_names = [x[0] for x in iso_map]
         groups = { mod:[] for mod in iso_names }
         while index < len(base):

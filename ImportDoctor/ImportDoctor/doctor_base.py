@@ -70,7 +70,7 @@ class ImportNurse(object):
                 f.write('{}={}\n'.format(var, getattr(self, var)))
 
     def __vars__(self):
-        return set([x for x in dir(self) if not x.startswith('__') 
+        return set([x for x in dir(self) if not x.startswith('__')
             and not x.startswith('_ImportNurse__') and not callable(getattr(self, x))])
 
     def __str__(self):
@@ -80,7 +80,7 @@ class ImportNurse(object):
         for line in self.Q:
             rep += line + '\n'
         return rep[:-1]
-    
+
     def iteritems(self):
         return [(var, getattr(self, var)) for var in self.__vars__()]
 
@@ -212,6 +212,7 @@ class ImportNurse(object):
         return False
 
     str_or_pat = staticmethod(lambda n: n if isinstance(n, str) else '__REGEX__ {}'.format(re.sub('\\\\\\\\', '\\\\', n.pattern)))
+    try_pattern = staticmethod(lambda n: (re.compile(n[10:]) if n.startswith('__REGEX__ ') else n) if isinstance(n, str) else n)
 
 
 # returns a long line with \\\n inserted after a space
