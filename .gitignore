@@ -4,6 +4,7 @@
 
 # Logs
 *.log
+.idea
 
 .project
 .pydevproject
@@ -15,3 +16,5 @@ venv
 ImportDoctor/ImportDoctor.egg-info/
 ImportDoctor/dist/
 tout/
+venvs/
+prefs/
