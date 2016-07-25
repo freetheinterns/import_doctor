@@ -94,7 +94,7 @@ class ImportDoctor(doctor_base.ImportNurse):
                 continue
             line = line.strip()
             while line.endswith('\\'):
-                line = line.replace('\\', ' ') + doc.pop(0).strip()
+                line = line.replace('\\', '') + doc.pop(0).strip()
             bracket = line.find('(')
             if bracket > 0:
                 while line.find(')', bracket) == -1:

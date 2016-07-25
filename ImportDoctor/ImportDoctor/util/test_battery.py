@@ -40,7 +40,7 @@ def test_regex(line, doctor, res):
 def test_all_regex():
     print 'TESTING ALL REGULAR EXPRESSION CASES'
     doc = ImportDoctor()
-    
+
     regex = [
         ('import animal.cat.mycat ', [['animal.cat.mycat']]),
         ('import   animal, automobile ', [['animal', 'automobile']]),
@@ -50,7 +50,7 @@ def test_all_regex():
         ('from animal.phyla import   (cat, dog, rat)', [['animal.phyla'], ['cat', 'dog', 'rat']]),
         ('from animal.phyla  import (cat, dog, rat) ', [['animal.phyla'], ['cat', 'dog', 'rat']]),
     ]
-    
+
     for line, res in regex:
         test_regex(line, doc, res)
     print 'PASSED'
@@ -68,8 +68,10 @@ def test_all_sorting():
         'from __future__ import cat',
         'from __future__ import rat, cat',
         'from __future__ import battery',
+        'from this.is.a.superlongimport.\\',
+        '           name import pleasework'
     ]
-    
+
     doc = ImportDoctor()
     doc.parse_source(unsorted[:])
     doc.sort_imports()
